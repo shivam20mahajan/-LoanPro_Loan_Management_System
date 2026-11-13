@@ -1,6 +1,6 @@
 """
 =========================================================
-             LOANPRO ADMIN - VERSION 3.2
+             LOANPRO ADMIN 
           LOAN & DISBURSEMENT MANAGEMENT SYSTEM
 =========================================================
 
@@ -30,15 +30,6 @@ FEATURES:
 14. Custom LoanPro fintech logo
 15. Logout
 
-THEME:
-Warm Coffee | Cream | Terracotta | Mustard
-
-Educational prototype.
-Do not use real Aadhaar, PAN, bank or financial information.
-
-Aadhaar and PAN are shown in full in the records table as requested.
-This is suitable only for dummy/test data, not production customer data.
-"""
 
 import tkinter as tk
 from tkinter import ttk, messagebox
