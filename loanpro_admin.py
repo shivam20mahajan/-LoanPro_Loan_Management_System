@@ -56,19 +56,12 @@ import configparser
 import sys
 from pathlib import Path
 
+
 # =========================================================
 # DATABASE CONFIGURATION
 # =========================================================
 
-DB_CONFIG = {
-    "host": "localhost",
-    "user": "root",
-    # Change this locally to the same password that works in MySQL CLI.
-    # Never share your database password in chat or commit it to GitHub.
-    "password": "MyNewPassword@123"
-}
-
-DATABASE_NAME = "loan_management"
+DATABASE_CONFIG_FILE = "database.ini"
 
 
 # =========================================================
@@ -204,40 +197,135 @@ class LoanManagementApp:
 
             self.on_close()
 
-    # =====================================================
-    # DATABASE CONNECTION
+        # =====================================================
+    # DATABASE CONNECTION USING database.ini
     # =====================================================
 
     def connect_database(self):
 
         try:
 
-            temp = mysql.connector.connect(
-                **DB_CONFIG
-            )
+            # Locate the configuration file.
 
-            cursor = temp.cursor()
+            if getattr(sys, "frozen", False):
 
-            cursor.execute(
-                f"CREATE DATABASE IF NOT EXISTS `{DATABASE_NAME}`"
-            )
+                # Running as a packaged EXE
+                application_folder = Path(sys.executable).resolve().parent
 
-            cursor.close()
+                config_path = (
+                    application_folder
+                    / "config"
+                    / DATABASE_CONFIG_FILE
+                )
 
-            temp.close()
+            else:
+
+                # Running the Python source code
+                source_folder = Path(__file__).resolve().parent
+
+                config_candidates = [
+
+                    source_folder.parent
+                    / "01_Application"
+                    / "config"
+                    / DATABASE_CONFIG_FILE,
+
+                    source_folder
+                    / "config"
+                    / DATABASE_CONFIG_FILE
+
+                ]
+
+                config_path = next(
+                    (
+                        path for path in config_candidates
+                        if path.is_file()
+                    ),
+                    None
+                )
+
+            if config_path is None or not config_path.is_file():
+
+                raise FileNotFoundError(
+                    "database.ini was not found.\n\n"
+                    "Expected location:\n"
+                    "01_Application/config/database.ini"
+                )
+
+            # Read configuration without interpreting % in passwords.
+            config = configparser.RawConfigParser()
+
+            config.read(config_path, encoding="utf-8")
+
+            if not config.has_section("mysql"):
+
+                raise ValueError(
+                    "The [mysql] section is missing in database.ini."
+                )
+
+            # Read database credentials.
+            db_config = {
+
+                "host": config.get("mysql", "host"),
+
+                "port": config.getint(
+                    "mysql",
+                    "port",
+                    fallback=3306
+                ),
+
+                "user": config.get("mysql", "user"),
+
+                "password": config.get("mysql", "password"),
+
+                "database": config.get("mysql", "database")
+
+            }
+
+            # Check required configuration values.
+            required = [
+                "host",
+                "user",
+                "password",
+                "database"
+            ]
+
+            for key in required:
+
+                if not db_config[key].strip():
+
+                    raise ValueError(
+                        f"Database configuration '{key}' is empty."
+                    )
+
+            self.database_name = db_config["database"]
+
+            # Connect directly to the existing database.
+            # No root account or database creation is required.
 
             self.conn = mysql.connector.connect(
-                **DB_CONFIG,
-                database=DATABASE_NAME
+                **db_config,
+                connection_timeout=10
             )
 
-            return True
+            if self.conn.is_connected():
 
-        except Error as exc:
+                return True
+
+            raise Error(
+                "MySQL connection could not be established."
+            )
+
+        except (
+            Error,
+            OSError,
+            ValueError,
+            configparser.Error
+        ) as exc:
 
             messagebox.showerror(
-                "MySQL Connection",
-                f"Unable to connect to MySQL.\n\n{exc}"
+                "MySQL Connection Error",
+                f"Unable to connect to LoanPro database.\n\n{exc}"
             )
 
             return False
@@ -354,7 +442,7 @@ class LoanManagementApp:
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_SCHEMA = %s
             AND TABLE_NAME = 'customers'
-        """, (DATABASE_NAME,))
+        """, (self.database_name,))
 
         columns = {
             row[0] for row in cursor.fetchall()
@@ -3004,19 +3092,19 @@ class LoanManagementApp:
             self.root.destroy()
 
 
-# =========================================================
-# START APPLICATION
-# =========================================================
+root = tk.Tk()
 
-if __name__ == "__main__":
+app = None
 
-    root = tk.Tk()
+root.protocol(
+    "WM_DELETE_WINDOW",
+    lambda: app.on_close() if app is not None else root.destroy()
+)
 
-    app = LoanManagementApp(root)
+app = LoanManagementApp(root)
 
-    root.protocol(
-        "WM_DELETE_WINDOW",
-        app.on_close
-    )
-
-    root.mainloop()
+try:
+    if root.winfo_exists():
+        root.mainloop()
+except tk.TclError:
+    pass
