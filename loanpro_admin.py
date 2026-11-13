@@ -1,17 +1,13 @@
 """
-=========================================================
-             LOANPRO ADMIN 
-          LOAN & DISBURSEMENT MANAGEMENT SYSTEM
-=========================================================
 
-Technology:
-Python | Tkinter | MySQL
+ LOANPRO ADMIN 
+ LOAN & DISBURSEMENT MANAGEMENT SYSTEM
 
-Installation:
-py -m pip install mysql-connector-python
 
-Run:
-py loanpro_admin.py
+Technology: Python | Tkinter | MySQL
+Installation: py -m pip install mysql-connector-python
+
+Run: py loanpro_admin.py
 
 FEATURES:
 1. Secure Admin Login
@@ -48,9 +44,9 @@ import sys
 from pathlib import Path
 
 
-# =========================================================
+
 # DATABASE CONFIGURATION
-# =========================================================
+
 
 DATABASE_CONFIG_FILE = "database.ini"
 
